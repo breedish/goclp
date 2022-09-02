@@ -2,6 +2,7 @@
 package server
 
 import (
+	"canvas/storage"
 	"context"
 	"errors"
 	"fmt"
@@ -14,16 +15,18 @@ import (
 )
 
 type Server struct {
-	address string
-	mux     chi.Router
-	server  *http.Server
-	log     *zap.Logger
+	address  string
+	database *storage.Database
+	mux      chi.Router
+	server   *http.Server
+	log      *zap.Logger
 }
 
 type Options struct {
-	Host string
-	Port int
-	Log  *zap.Logger
+	Database *storage.Database
+	Host     string
+	Port     int
+	Log      *zap.Logger
 }
 
 func New(opts Options) *Server {
@@ -35,8 +38,9 @@ func New(opts Options) *Server {
 	}
 
 	return &Server{
-		address: address,
-		mux:     mux,
+		address:  address,
+		database: opts.Database,
+		mux:      mux,
 		server: &http.Server{
 			Addr:              address,
 			Handler:           mux,
@@ -51,6 +55,10 @@ func New(opts Options) *Server {
 
 // Start the Server by setting up routes and listening for HTTP requests on the given address
 func (s *Server) Start() error {
+	if err := s.database.Connect(); err != nil {
+		return fmt.Errorf("error connecting to database: %w", err)
+	}
+
 	s.setupRoutes()
 
 	s.log.Info("Starting", zap.String("address", s.address))
