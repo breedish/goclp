@@ -3,16 +3,20 @@
 package main
 
 import (
+	"canvas/messaging"
 	"context"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/aws/smithy-go/logging"
+	"github.com/maragudk/env"
+	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
-
-	"github.com/maragudk/env"
-	"go.uber.org/zap"
-	"golang.org/x/sync/errgroup"
 
 	"canvas/server"
 	"canvas/storage"
@@ -45,11 +49,21 @@ func start() int {
 	host := env.GetStringOrDefault("HOST", "localhost")
 	port := env.GetIntOrDefault("PORT", 8080)
 
+	awsConfig, err := config.LoadDefaultConfig(context.Background(),
+		config.WithLogger(createAWSLogAdapter(log)),
+		config.WithEndpointResolver(createAWSEndpointResolver()),
+	)
+	if err != nil {
+		log.Info("Error creating AWS config", zap.Error(err))
+		return 1
+	}
+
 	s := server.New(server.Options{
 		Database: createDatabase(log),
 		Host:     host,
 		Log:      log,
 		Port:     port,
+		Queue:    createQueue(log, awsConfig),
 	})
 
 	var eg errgroup.Group
@@ -74,6 +88,42 @@ func start() int {
 		return 1
 	}
 	return 0
+}
+
+func createAWSLogAdapter(log *zap.Logger) logging.LoggerFunc {
+	return func(classification logging.Classification, format string, v ...interface{}) {
+		switch classification {
+		case logging.Debug:
+			log.Sugar().Debugf(format, v...)
+		case logging.Warn:
+			log.Sugar().Warnf(format, v...)
+		}
+	}
+}
+
+// createAWSEndpointResolver used for local development endpoints.
+// See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/endpoints/
+func createAWSEndpointResolver() aws.EndpointResolverFunc {
+	sqsEndpointURL := env.GetStringOrDefault("SQS_ENDPOINT_URL", "")
+
+	return func(service, region string) (aws.Endpoint, error) {
+		if sqsEndpointURL != "" && service == sqs.ServiceID {
+			return aws.Endpoint{
+				URL: sqsEndpointURL,
+			}, nil
+		}
+		// Fallback to default endpoint
+		return aws.Endpoint{}, &aws.EndpointNotFoundError{}
+	}
+}
+
+func createQueue(log *zap.Logger, awsConfig aws.Config) *messaging.Queue {
+	return messaging.NewQueue(messaging.NewQueueOptions{
+		Config:   awsConfig,
+		Log:      log,
+		Name:     env.GetStringOrDefault("QUEUE_NAME", "jobs"),
+		WaitTime: env.GetDurationOrDefault("QUEUE_WAIT_TIME", 20*time.Second),
+	})
 }
 
 func createLogger(env string) (*zap.Logger, error) {

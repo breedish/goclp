@@ -17,5 +17,16 @@ services:
       POSTGRES_DB: template1
     ports:
       - 5433:5432
+  elasticmq:
+    image: softwaremill/elasticmq-native
+    ports:
+      - 9324:9324
+      - 9325:9325
+    volumes:
+      - ./elasticmq.conf:/opt/elasticmq.conf
+  elasticmq-test:
+    image: softwaremill/elasticmq-native
+    ports:
+      - 9326:9324
 volumes:
   postgres:

@@ -2,6 +2,7 @@
 package server
 
 import (
+	"canvas/messaging"
 	"canvas/storage"
 	"context"
 	"errors"
@@ -19,6 +20,7 @@ type Server struct {
 	database *storage.Database
 	mux      chi.Router
 	server   *http.Server
+	queue    *messaging.Queue
 	log      *zap.Logger
 }
 
@@ -26,6 +28,7 @@ type Options struct {
 	Database *storage.Database
 	Host     string
 	Port     int
+	Queue    *messaging.Queue
 	Log      *zap.Logger
 }
 
@@ -49,7 +52,8 @@ func New(opts Options) *Server {
 			WriteTimeout:      5 * time.Second,
 			IdleTimeout:       5 * time.Second,
 		},
-		log: opts.Log,
+		queue: opts.Queue,
+		log:   opts.Log,
 	}
 }
 
