@@ -3,6 +3,7 @@
 package main
 
 import (
+	"canvas/jobs"
 	"canvas/messaging"
 	"context"
 	"fmt"
@@ -58,12 +59,20 @@ func start() int {
 		return 1
 	}
 
+	queue := createQueue(log, awsConfig)
+
 	s := server.New(server.Options{
 		Database: createDatabase(log),
 		Host:     host,
 		Log:      log,
 		Port:     port,
-		Queue:    createQueue(log, awsConfig),
+		Queue:    queue,
+	})
+
+	r := jobs.NewRunner(jobs.NewRunnerOptions{
+		Emailer: createEmailer(log, host, port),
+		Log:     log,
+		Queue:   queue,
 	})
 
 	var eg errgroup.Group
@@ -79,6 +88,11 @@ func start() int {
 		return nil
 	})
 
+	eg.Go(func() error {
+		r.Start(ctx)
+		return nil
+	})
+
 	if err := s.Start(); err != nil {
 		log.Info("Error starting server", zap.Error(err))
 		return 1
@@ -88,6 +102,20 @@ func start() int {
 		return 1
 	}
 	return 0
+}
+
+func createEmailer(log *zap.Logger, host string, port int) *messaging.Emailer {
+	return messaging.NewEmailer(messaging.NewEmailerOptions{
+		BaseURL:            env.GetStringOrDefault("BASE_URL", fmt.Sprintf("http://%v:%v", host, port)),
+		Log:                log,
+		MarketingEmailName: env.GetStringOrDefault("MARKETING_EMAIL_NAME", "Canvas bot"),
+		MarketingEmailAddress: env.GetStringOrDefault("MARKETING_EMAIL_ADDRESS",
+			"bot@marketing.example.com"),
+		Token:                  env.GetStringOrDefault("POSTMARK_TOKEN", ""),
+		TransactionalEmailName: env.GetStringOrDefault("TRANSACTIONAL_EMAIL_NAME", "Canvas bot"),
+		TransactionalEmailAddress: env.GetStringOrDefault("TRANSACTIONAL_EMAIL_ADDRESS",
+			"bot@transactional.example.com"),
+	})
 }
 
 func createAWSLogAdapter(log *zap.Logger) logging.LoggerFunc {

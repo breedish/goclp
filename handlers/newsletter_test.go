@@ -47,7 +47,7 @@ func TestNewsletterSignup(t *testing.T) {
 		is.Equal(model.Email("me@example.com"), s.email)
 
 		is.Equal(q.m, model.Message{
-			"job":   "confirmation_email",
+			"job":   "confirmation_email.html",
 			"email": "me@example.com",
 			"token": "123",
 		})
