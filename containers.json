@@ -1,0 +1,24 @@
+{
+  "app": {
+    "image": "",
+    "environment": {
+      "LOG_ENV": "production",
+      "HOST": "",
+      "PORT": "8080",
+      "DB_USER": "canvas",
+      "DB_PASSWORD": "12345678",
+      "DB_HOST": "ls-dbd342e29a8cc79f6a53192896d5cbda29638cfe.ctw0krp8mgyo.us-east-2.rds.amazonaws.com",
+      "DB_NAME": "canvas",
+      "BASE_URL": "https://canvas.li26aianfveni.us-east-2.cs.amazonlightsail.com/",
+      "POSTMARK_TOKEN": "9c93e3bd-ea8a-499e-9170-5c92e7b7291f",
+      "MARKETING_EMAIL_ADDRESS": "d.zenin+marketing@severex.io",
+      "TRANSACTIONAL_EMAIL_ADDRESS": "d.zenin@severex.io",
+      "AWS_ACCESS_KEY_ID": "AKIA56VXTU32QS3QXWFP",
+      "AWS_SECRET_ACCESS_KEY": "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",
+      "ADMIN_PASSWORD": "eyDawVH9LLZtaG2q"
+    },
+    "ports": {
+      "8080": "HTTP"
+    }
+  }
+}

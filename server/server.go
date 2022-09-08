@@ -16,20 +16,22 @@ import (
 )
 
 type Server struct {
-	address  string
-	database *storage.Database
-	mux      chi.Router
-	server   *http.Server
-	queue    *messaging.Queue
-	log      *zap.Logger
+	address       string
+	adminPassword string
+	database      *storage.Database
+	mux           chi.Router
+	server        *http.Server
+	queue         *messaging.Queue
+	log           *zap.Logger
 }
 
 type Options struct {
-	Database *storage.Database
-	Host     string
-	Port     int
-	Queue    *messaging.Queue
-	Log      *zap.Logger
+	Database      *storage.Database
+	Host          string
+	Port          int
+	AdminPassword string
+	Queue         *messaging.Queue
+	Log           *zap.Logger
 }
 
 func New(opts Options) *Server {
@@ -41,9 +43,10 @@ func New(opts Options) *Server {
 	}
 
 	return &Server{
-		address:  address,
-		database: opts.Database,
-		mux:      mux,
+		address:       address,
+		adminPassword: opts.AdminPassword,
+		database:      opts.Database,
+		mux:           mux,
 		server: &http.Server{
 			Addr:              address,
 			Handler:           mux,
