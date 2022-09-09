@@ -22,6 +22,9 @@ func (d *Database) SignupForNewsletter(ctx context.Context, email model.Email) (
 		on conflict (email) do update set
 			token = excluded.token,
 			updated = now()`
+	println(query)
+	println(email)
+	println(token)
 	_, err = d.DB.ExecContext(ctx, query, email, token)
 	return token, err
 }

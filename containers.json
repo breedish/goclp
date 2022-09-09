@@ -1,6 +1,6 @@
 {
   "app": {
-    "image": "",
+    "image": ":canvas.app.4",
     "environment": {
       "LOG_ENV": "production",
       "HOST": "",

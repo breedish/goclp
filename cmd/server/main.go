@@ -12,6 +12,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/smithy-go/logging"
 	"github.com/maragudk/env"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"os"
@@ -59,15 +61,28 @@ func start() int {
 		return 1
 	}
 
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	registry.MustRegister(collectors.NewGoCollector())
+
 	queue := createQueue(log, awsConfig)
 
+	db := createDatabase(log, registry)
+
+	if err := db.Connect(); err != nil {
+		log.Info("Error connecting to database", zap.Error(err))
+		return 1
+	}
+
 	s := server.New(server.Options{
-		Database:      createDatabase(log),
-		Host:          host,
-		Log:           log,
-		Port:          port,
-		AdminPassword: env.GetStringOrDefault("ADMIN_PASSWORD", "eyDawVH9LLZtaG2q"),
-		Queue:         queue,
+		Database:        db,
+		Host:            host,
+		Log:             log,
+		Port:            port,
+		AdminPassword:   env.GetStringOrDefault("ADMIN_PASSWORD", "admin"),
+		Queue:           queue,
+		MetricsPassword: env.GetStringOrDefault("METRICS_PASSWORD", "12345678"),
+		Metrics:         registry,
 	})
 
 	r := jobs.NewRunner(jobs.NewRunnerOptions{
@@ -166,7 +181,7 @@ func createLogger(env string) (*zap.Logger, error) {
 	}
 }
 
-func createDatabase(log *zap.Logger) *storage.Database {
+func createDatabase(log *zap.Logger, registry *prometheus.Registry) *storage.Database {
 	return storage.NewDatabase(storage.NewDatabaseOptions{
 		Host:                  env.GetStringOrDefault("DB_HOST", "localhost"),
 		Port:                  env.GetIntOrDefault("DB_PORT", 5432),
@@ -177,5 +192,6 @@ func createDatabase(log *zap.Logger) *storage.Database {
 		MaxIdleConnections:    env.GetIntOrDefault("DB_MAX_IDLE_CONNECTIONS", 10),
 		ConnectionMaxLifetime: env.GetDurationOrDefault("DB_CONNECTION_MAX_LIFETIME", time.Hour),
 		Log:                   log,
+		Metrics:               registry,
 	})
 }
