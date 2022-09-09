@@ -1,6 +1,6 @@
 {
   "app": {
-    "image": ":canvas.app.4",
+    "image": ":canvas.app.8",
     "environment": {
       "LOG_ENV": "production",
       "HOST": "",
@@ -20,5 +20,8 @@
     "ports": {
       "8080": "HTTP"
     }
+  },
+  "prometheus": {
+    "image": ":canvas.prometheus.5"
   }
 }

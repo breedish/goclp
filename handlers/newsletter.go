@@ -5,6 +5,7 @@ import (
 	"canvas/views"
 	"context"
 	"github.com/go-chi/chi/v5"
+	"go.uber.org/zap"
 	"net/http"
 )
 
@@ -16,7 +17,7 @@ type sender interface {
 	Send(ctx context.Context, m model.Message) error
 }
 
-func NewsletterSignup(mux chi.Router, s signupper, q sender) {
+func NewsletterSignup(mux chi.Router, s signupper, q sender, log *zap.Logger) {
 	mux.Post("/newsletter/signup", func(w http.ResponseWriter, r *http.Request) {
 		email := model.Email(r.FormValue("email"))
 
@@ -27,9 +28,11 @@ func NewsletterSignup(mux chi.Router, s signupper, q sender) {
 
 		token, err := s.SignupForNewsletter(r.Context(), email)
 		if err != nil {
+			log.Info("Error signing up for newsletter", zap.Error(err))
 			http.Error(w, "error signing up, refresh to try again", http.StatusBadGateway)
 			return
 		}
+
 		err = q.Send(r.Context(), model.Message{
 			"job":   "confirmation_email",
 			"email": email.String(),

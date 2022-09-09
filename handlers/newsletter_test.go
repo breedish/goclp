@@ -2,6 +2,7 @@ package handlers_test
 
 import (
 	"context"
+	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -37,7 +38,7 @@ func TestNewsletterSignup(t *testing.T) {
 	mux := chi.NewMux()
 	s := &signupperMock{}
 	q := &senderMock{}
-	handlers.NewsletterSignup(mux, s, q)
+	handlers.NewsletterSignup(mux, s, q, zap.NewNop())
 
 	t.Run("signs up a valid email address and sends a message", func(t *testing.T) {
 		is := is.New(t)
