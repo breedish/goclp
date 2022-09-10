@@ -146,9 +146,10 @@ func getEmail(path string, keywords map[string]string) string {
 	return emailString
 }
 
-func (e *Emailer) SendNewsletterWelcomeEmail(ctx context.Context, to model.Email) error {
+func (e *Emailer) SendNewsletterWelcomeEmail(ctx context.Context, to model.Email, giftURL string) error {
 	keywords := map[string]string{
 		"base_url": e.baseURL,
+		"gift_url": giftURL,
 	}
 
 	return e.send(ctx, requestBody{

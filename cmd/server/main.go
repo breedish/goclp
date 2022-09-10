@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/smithy-go/logging"
 	"github.com/maragudk/env"
@@ -86,9 +87,10 @@ func start() int {
 	})
 
 	r := jobs.NewRunner(jobs.NewRunnerOptions{
-		Emailer: createEmailer(log, host, port),
-		Log:     log,
-		Queue:   queue,
+		BlobStore: createBlobStore(log, awsConfig),
+		Emailer:   createEmailer(log, host, port),
+		Log:       log,
+		Queue:     queue,
 	})
 
 	var eg errgroup.Group
@@ -149,16 +151,35 @@ func createAWSLogAdapter(log *zap.Logger) logging.LoggerFunc {
 // See https://aws.github.io/aws-sdk-go-v2/docs/configuring-sdk/endpoints/
 func createAWSEndpointResolver() aws.EndpointResolverFunc {
 	sqsEndpointURL := env.GetStringOrDefault("SQS_ENDPOINT_URL", "")
+	s3EndpointURL := env.GetStringOrDefault("S3_ENDPOINT_URL", "")
 
 	return func(service, region string) (aws.Endpoint, error) {
-		if sqsEndpointURL != "" && service == sqs.ServiceID {
-			return aws.Endpoint{
-				URL: sqsEndpointURL,
-			}, nil
+		switch service {
+		case sqs.ServiceID:
+			if sqsEndpointURL != "" {
+				return aws.Endpoint{
+					URL: sqsEndpointURL,
+				}, nil
+			}
+		case s3.ServiceID:
+			if s3EndpointURL != "" {
+				return aws.Endpoint{
+					URL: s3EndpointURL,
+				}, nil
+			}
 		}
 		// Fallback to default endpoint
 		return aws.Endpoint{}, &aws.EndpointNotFoundError{}
 	}
+}
+
+func createBlobStore(log *zap.Logger, awsConfig aws.Config) *storage.BlobStore {
+	return storage.NewBlobStore(storage.NewBlobStoreOptions{
+		Bucket:    env.GetStringOrDefault("BUCKET_NAME", "assets"),
+		Config:    awsConfig,
+		Log:       log,
+		PathStyle: env.GetBoolOrDefault("BLOB_STORE_PATH_STYLE", false),
+	})
 }
 
 func createQueue(log *zap.Logger, awsConfig aws.Config) *messaging.Queue {

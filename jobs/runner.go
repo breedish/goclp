@@ -1,6 +1,7 @@
 package jobs
 
 import (
+	"canvas/storage"
 	"context"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -16,6 +17,7 @@ import (
 
 // Runner runs jobs.
 type Runner struct {
+	blobStore      *storage.BlobStore
 	emailer        *messaging.Emailer
 	jobs           map[string]Func
 	log            *zap.Logger
@@ -26,10 +28,11 @@ type Runner struct {
 }
 
 type NewRunnerOptions struct {
-	Emailer *messaging.Emailer
-	Log     *zap.Logger
-	Queue   *messaging.Queue
-	Metrics *prometheus.Registry
+	BlobStore *storage.BlobStore
+	Emailer   *messaging.Emailer
+	Log       *zap.Logger
+	Queue     *messaging.Queue
+	Metrics   *prometheus.Registry
 }
 
 func NewRunner(opts NewRunnerOptions) *Runner {
@@ -54,6 +57,7 @@ func NewRunner(opts NewRunnerOptions) *Runner {
 	}, []string{"success"})
 
 	return &Runner{
+		blobStore:      opts.BlobStore,
 		emailer:        opts.Emailer,
 		jobs:           map[string]Func{},
 		log:            opts.Log,
